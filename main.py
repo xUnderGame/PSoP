@@ -76,8 +76,8 @@ async def on_command_error(ctx, error):
 #Help Command
 @client.command(aliases=["prefix","psop","sop","commands","cmd"])
 async def help(ctx):
-  embed = discord.Embed(title="PSoP Commands", description="`help`, `check`, `smash`, `pass`, `info`",timestamp=ctx.message.created_at,color=settings.infocolor)
-  embed.set_footer(icon_url=botIcon, text="PSoP, ver 1.0")
+  embed = discord.Embed(title="PSoP Commands", description="`help`, `check`, `smash`, `pass`, `info`, `repo`",timestamp=ctx.message.created_at,color=settings.infocolor)
+  embed.set_footer(icon_url=botIcon, text="PSoP, ver 1.1")
   await ctx.send(embed=embed)
 
 #Info command
@@ -85,7 +85,14 @@ async def help(ctx):
 async def info(ctx):
   embed = discord.Embed(title="Information", description="This bot was literally made in two days, and I'm not angry about how it looks, it's pretty decent.\nAnyways, all rights go to nintendo blah blah blah.\nThis bot is using requests and soup to access the images from the pokemon pokedex. Made in python by **UnderGame#4540**",timestamp=ctx.message.created_at,color=settings.infocolor)
   embed.add_field(name="Commands:", value=f"All commands accept the Pokemon **ID**, the **name** and '**random**' as arguments. That way you can use them easily.", inline=True)
-  embed.set_footer(icon_url=botIcon, text="PSoP, ver 1.0")
+  embed.set_footer(icon_url=botIcon, text="PSoP, ver 1.1")
+  await ctx.send(embed=embed)
+  
+#Repository command
+@client.command(aliases=["repository","git","github","code","source"])
+async def repo(ctx):
+  embed = discord.Embed(title="Github Repo", description="Check out the github repo [here](https://github.com/xUnderGame/PSoP)!",timestamp=ctx.message.created_at,color=settings.infocolor)
+  embed.set_footer(icon_url=botIcon, text="PSoP, ver 1.1")
   await ctx.send(embed=embed)
 
 #Smash command
@@ -139,7 +146,7 @@ async def smash(ctx, number: str):
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldPass}` users would pass this pokemon.", inline=True)
     statusEmbed.add_field(name="Smashed!", value=f"You would smash this pokemon, heck yeah.", inline=False)
     statusEmbed.set_thumbnail(url="attachment://pokemon.png")
-    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.0")
+    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.1")
     await deleteEmbed.delete()
     await ctx.send(file=fileToSend, embed=statusEmbed)
 
@@ -194,7 +201,7 @@ async def pokePass(ctx, number: str):
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldPass}` users would now pass this pokemon.", inline=True)
     statusEmbed.add_field(name="Passed!", value=f"You would't smash this pokemon. That's good.", inline=False)
     statusEmbed.set_thumbnail(url="attachment://pokemon.png")
-    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.0")
+    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.1")
     await deleteEmbed.delete()
     await ctx.send(file=fileToSend, embed=statusEmbed)
 
@@ -264,7 +271,7 @@ async def check(ctx, number: str):
     statusEmbed.add_field(name="SMASH or PASS?", value=f":punch: = Smash\n:broken_heart: = Pass", inline=True)
 
     statusEmbed.set_thumbnail(url="attachment://pokemon.png")
-    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.0")
+    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.1")
     await deleteEmbed.delete()
     pokeEmbed = await ctx.send(file=fileToSend, embed=statusEmbed)
 
@@ -399,17 +406,17 @@ async def checkPokeNum(pokeNum, ctx):
 
     #Starting embed
     processingEmbed = discord.Embed(title=f"Processing Command...", description=f"Please wait a couple of seconds.",timestamp=ctx.message.created_at,color=settings.infocolor)
-    processingEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.0")
+    processingEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.1")
     processEdit = await ctx.send(embed=processingEmbed)
 
     #Random number?
     if pokeNum.lower() == "random":
-        pokeNum = str(random.randint(1,898))
+        pokeNum = str(random.randint(1,905))
 
-    #Check if the number is valid (for pokemons 898 max)
+    #Check if the number is valid (for pokemons 905 max)
     if pokeNum.isdigit() == True:
         pokeNum = int(pokeNum)
-        if pokeNum > 898 or pokeNum < 1:
+        if pokeNum > 905 or pokeNum < 1:
             badNumber = True
 
     #Number length and stuff
@@ -453,13 +460,13 @@ async def checkPokeNum(pokeNum, ctx):
     #If bad then exit
     if badNumber == True:
         errorEmbed = discord.Embed(title=f"Error!", description=f":x: Sorry, we could't find that Pokemon! It might be a server issue or the Pokemon does not exist. You should use '-' if the Pokemon is separated by spaces.",timestamp=ctx.message.created_at,color=settings.infocolor)
-        errorEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.0")
+        errorEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.1")
         await processEdit.edit(embed=errorEmbed)
         return False, processEdit
     else:
         #Pokemon was found!
         goodEmbed = discord.Embed(title=f"Pokemon Found!", description=f":white_check_mark: Alright, loading the pokemon now!",timestamp=ctx.message.created_at,color=settings.infocolor)
-        goodEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.0")
+        goodEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 1.1")
         await processEdit.edit(embed=goodEmbed)
         
         await asyncio.sleep(1)
