@@ -15,6 +15,5 @@ Step 5: Navigate to the last line in the file "main.py" and replace the string w
 Step 6: Run main.py and have fun!
 ```
 
-![image](https://user-images.githubusercontent.com/59314622/174458671-337a5d3a-c668-4cd4-b3ce-268d4690eca5.png)
-
-*yes, i reused the image from another repo*
+## Download
+Click [here](https://github.com/xUnderGame/PSoP/releases/tag/v1.0.0) to download the lastest version of this bot.
