@@ -1,9 +1,9 @@
 # PSoP, the Discord Chatbot
-The public "Pokemon Smash or Pass" Github repository, this was made in 2 days as a fun project. It uses beautifulsoup. 
+The public "Pokemon Smash or Pass" Github repository, this was made in 2 days as a fun project. It uses beautifulsoup and requests. 
 
-If you are looking forward on using the bot, note that this isnt supported for newer pokemons, so you will have to dig trough the code to find out the hardcoded max pokemon number on the definitions and other places like that.
+If you are looking forward on using the bot, note that this isnt supported for newer pokemons (currently maximum is 905), therefore you will need to edit the 'maxNum' variable located in 'settings.py'.
 
-Enjoy!
+Enjoy! (Please credit me if you use the source code).
 
 ## How to use for yourself?
 ```
@@ -16,4 +16,4 @@ Step 6: Run main.py and have fun!
 ```
 
 ## Download
-Click [here](https://github.com/xUnderGame/PSoP/releases/tag/v1.0.0) to download the lastest version of this bot.
+Click [here](https://github.com/xUnderGame/PSoP/releases/tag/v2.0.0) to download the lastest version of this bot.
