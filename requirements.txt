@@ -1,0 +1,6 @@
+pymysql
+python-dotenv
+discord.py
+discord
+requests
+bs4

@@ -1,21 +1,25 @@
-﻿# Imports
-import discord
+﻿import discord
+import pymysql
 import settings
-import urllib.request
-import urllib.error
-import random
 import requests
+import random
 import asyncio
-import json
-import os
 import re
+import os
 
+from dotenv import dotenv_values, load_dotenv
 from discord.ext import commands
 from bs4 import BeautifulSoup
+from urllib import request
+from urllib import error
 
 # Defining Client
 intents = discord.Intents.all()
 client = commands.Bot(command_prefix="sp!", help_command=None, case_insensitive=True, intents=intents)
+
+# ENV
+load_dotenv()
+config = dotenv_values(".env")
 
 
 def __init__(self, client):
@@ -27,24 +31,27 @@ def __init__(self, client):
 async def on_ready():
     await client.change_presence(status=discord.Status.online, activity=discord.Game("sp!help | pokemon.com"))
     global botIcon
-    botIcon = "https://cdn.discordapp.com/avatars/942443498915909683/8b1f3a580a07d6045ec8f78fd67003a3.webp?size=80"
-
-    global passed
     global smashed
+    global passed
+    botIcon = settings.botIcon
 
     # Prints and databases
     print("====== Bot Stats ======")
     print(" > Logged in as:", str(client.user.name) + "#" + str(client.user.discriminator))
     print(" > Latency: " + str(client.latency)[0:4] + "ms")
-    print("====== Databases ======")
+    print("==== SQL Database ====")
 
-    with open("database/passed.json") as f:
-        passed = json.load(f)
-        print("     > PPD Loaded")
-
-    with open("database/smashed.json") as f:
-        smashed = json.load(f)
-        print("     > PSD Loaded")
+    # Connect to the database
+    global db
+    db = pymysql.connect(host=dotenv_values()["DB_HOST"],
+                         user=dotenv_values()["DB_UNAME"],
+                         password=dotenv_values()["DB_PASS"],
+                         database=dotenv_values()["DB"],
+                         autocommit=True)
+    if not db:
+        print("No Database Detected, bot might crash.")
+    else:
+        print("Database loaded and working.")
 
     print("===== App Errors =====")
 
@@ -83,11 +90,11 @@ async def on_command_error(ctx, error):
 
 
 # Help Command
-@client.command(aliases=["prefix", "psop", "sop", "commands", "cmd", "commands"])
+@client.command(aliases=["prefix", "psop", "sop", "commands", "cmd"])
 async def help(ctx):
     embed = discord.Embed(title="PSoP Commands", description="`help`, `check`, `smash`, `pass`, `info`, `repo`",
                           timestamp=ctx.message.created_at, color=settings.defaultColor)
-    embed.set_footer(icon_url=botIcon, text="PSoP, ver 2.0")
+    embed.set_footer(icon_url=botIcon, text="PSoP, version{settings.version}")
     await ctx.send(embed=embed)
 
 
@@ -100,7 +107,7 @@ async def info(ctx):
     embed.add_field(name="Commands:",
                     value=f"All commands accept the Pokemon **ID**, the **name** and '**random**' as arguments. That way you can use them easily.",
                     inline=True)
-    embed.set_footer(icon_url=botIcon, text="PSoP, ver 2.0")
+    embed.set_footer(icon_url=botIcon, text="PSoP, version{settings.version}")
     await ctx.send(embed=embed)
 
 
@@ -110,7 +117,7 @@ async def repo(ctx):
     embed = discord.Embed(title="Github Repo",
                           description="Check out the github repo [here](https://github.com/xUnderGame/PSoP)!",
                           timestamp=ctx.message.created_at, color=settings.defaultColor)
-    embed.set_footer(icon_url=botIcon, text="PSoP, ver 2.0")
+    embed.set_footer(icon_url=botIcon, text="PSoP, version{settings.version}")
     await ctx.send(embed=embed)
 
 
@@ -129,7 +136,7 @@ async def smash(ctx, number: str):
     if fileCheck is False:
         # Do the request (And download the file)
         requestedUrl = str("https://assets.pokemon.com/assets/cms2/img/pokedex/full/" + number + ".png")
-        urllib.request.urlretrieve(requestedUrl, "images/" + number + ".png")
+        request.urlretrieve(requestedUrl, "images/" + number + ".png")
 
     # Open page and stuff
     pokeUrl = str("https://www.pokemon.com/us/pokedex/" + number)  # The URL we are using
@@ -143,19 +150,13 @@ async def smash(ctx, number: str):
     pokeDesc = getPokeDesc(htmlSouped)
 
     # Times Smashed/Passed + add the user entry
-    _load()
-    smashed["poke"][number] += 1
-    wouldSmash = smashed["poke"][number]
-    wouldPass = passed["poke"][number]
-    _save()
+    updDB(number, "smashed")
+    loadDB(number)
+    wouldSmash = smashed
+    wouldPass = passed
 
     # Get the color of the embed
     statusColor = await getColoredEmbed(htmlSouped)
-
-    # Easter eggs
-    easterEgg = await checkEaster(number)
-    if easterEgg is not None:
-        pokeDesc = easterEgg
 
     # Prepare and send the embed with the image
     fileToSend = discord.File("images/" + number + ".png", filename="pokemon.png")
@@ -167,7 +168,7 @@ async def smash(ctx, number: str):
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldPass}` users would pass this pokemon.", inline=True)
     statusEmbed.add_field(name="Smashed!", value=f"You would smash this pokemon, heck yeah.", inline=False)
     statusEmbed.set_thumbnail(url="attachment://pokemon.png")
-    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 2.0")
+    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, version{settings.version}")
     await deleteEmbed.delete()
     await ctx.send(file=fileToSend, embed=statusEmbed)
 
@@ -187,7 +188,7 @@ async def pokePass(ctx, number: str):
     if fileCheck is False:
         # Do the request (And download the file)
         requestedUrl = str("https://assets.pokemon.com/assets/cms2/img/pokedex/full/" + number + ".png")
-        urllib.request.urlretrieve(requestedUrl, "images/" + number + ".png")
+        request.urlretrieve(requestedUrl, "images/" + number + ".png")
 
     # Open page and stuff
     pokeUrl = str("https://www.pokemon.com/us/pokedex/" + number)  # The URL we are using
@@ -201,19 +202,13 @@ async def pokePass(ctx, number: str):
     pokeDesc = getPokeDesc(htmlSouped)
 
     # Times Smashed/Passed + add the user entry
-    _load()
-    passed["poke"][number] += 1
-    wouldSmash = smashed["poke"][number]
-    wouldPass = passed["poke"][number]
-    _save()
+    updDB(number, "passed")
+    loadDB(number)
+    wouldSmash = smashed
+    wouldPass = passed
 
     # Get the color of the embed
     statusColor = await getColoredEmbed(htmlSouped)
-
-    # Easter eggs
-    easterEgg = await checkEaster(number)
-    if easterEgg is not None:
-        pokeDesc = easterEgg
 
     # Prepare and send the embed with the image
     fileToSend = discord.File("images/" + number + ".png", filename="pokemon.png")
@@ -224,7 +219,7 @@ async def pokePass(ctx, number: str):
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldPass}` users would now pass this pokemon.", inline=True)
     statusEmbed.add_field(name="Passed!", value=f"You wouldn't smash this pokemon. That's good.", inline=False)
     statusEmbed.set_thumbnail(url="attachment://pokemon.png")
-    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 2.0")
+    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, version{settings.version}")
     await deleteEmbed.delete()
     await ctx.send(file=fileToSend, embed=statusEmbed)
 
@@ -244,7 +239,7 @@ async def check(ctx, number: str):
     if fileCheck is False:
         # Do the request (And download the file)
         requestedUrl = str("https://assets.pokemon.com/assets/cms2/img/pokedex/full/" + number + ".png")
-        urllib.request.urlretrieve(requestedUrl, "images/" + number + ".png")
+        request.urlretrieve(requestedUrl, "images/" + number + ".png")
 
     # Open page and stuff
     pokeUrl = str("https://www.pokemon.com/us/pokedex/" + number)  # The URL we are using
@@ -260,17 +255,12 @@ async def check(ctx, number: str):
     pokeWeight = getPokeWeight(htmlSouped)
 
     # Times Smashed/Passed
-    _load()
-    wouldSmash = smashed["poke"][number]
-    wouldPass = passed["poke"][number]
+    loadDB(number)
+    wouldSmash = smashed
+    wouldPass = passed
 
     # Get the color of the embed
     statusColor = await getColoredEmbed(htmlSouped)
-
-    # Easter eggs
-    easterEgg = await checkEaster(number)
-    if easterEgg is not None:
-        pokeDesc = easterEgg
 
     # Prepare and send the embed with the image
     fileToSend = discord.File("images/" + number + ".png", filename="pokemon.png")
@@ -286,7 +276,7 @@ async def check(ctx, number: str):
     statusEmbed.add_field(name="SMASH or PASS?", value=f":punch: = Smash\n:broken_heart: = Pass", inline=True)
 
     statusEmbed.set_thumbnail(url="attachment://pokemon.png")
-    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 2.0")
+    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, version{settings.version}")
     await deleteEmbed.delete()
     pokeEmbed = await ctx.send(file=fileToSend, embed=statusEmbed)
 
@@ -303,15 +293,13 @@ async def check(ctx, number: str):
         # Smash or pass thing
         if reactionUsed.emoji == "👊":
             statusEmbed.add_field(name="👊 You would SMASH that pokemon!",
-                                  value=f"Your record has been carefully saved into the database.", inline=True)
-            smashed["poke"][number] += 1
+                                  value="Your choice has been saved into the database.", inline=True)
+            updDB(number, "smashed")
 
         elif reactionUsed.emoji == "💔":
             statusEmbed.add_field(name="💔 You would pass that pokemon.",
-                                  value=f"Your record has been carefully saved into the database.", inline=True)
-            passed["poke"][number] += 1
-
-        _save()
+                                  value="Your choice has been saved into the database.", inline=True)
+            updDB(number, "passed")
 
     # Timeout, do nothing.
     except asyncio.exceptions.TimeoutError:
@@ -350,7 +338,6 @@ def getPokeDesc(htmlSpoon):
 
 # Get the pokemon genders
 def getPokeGenders(htmlSpoon):
-
     # Lets find the pokemon genders...
     pokeGender = "None"
     doMale = False
@@ -374,7 +361,6 @@ def getPokeGenders(htmlSpoon):
 
 # Get the Pokémon category
 def getPokeCategory(htmlSpoon):
-
     # Let's find the pokemon category...
     spoonedDiv = htmlSpoon.find('div', {"class": ["pokemon-ability-info", "match", "color-bg"]})
     rawString = str(spoonedDiv.text)
@@ -392,7 +378,6 @@ def getPokeCategory(htmlSpoon):
 
 # Get the Pokémon height
 def getPokeHeight(htmlSpoon):
-
     # Let's find the pokemon height...
     spoonedDiv = htmlSpoon.find('div', {"class": {"column-7"}})
     rawString = str(spoonedDiv.text)
@@ -406,7 +391,6 @@ def getPokeHeight(htmlSpoon):
 
 # Get the Pokémon weight
 def getPokeWeight(htmlSpoon):
-
     # Let's find the pokemon weight...
     spoonedDiv = htmlSpoon.find('div', {"class": {"column-7"}})
     rawString = str(spoonedDiv.text)
@@ -425,7 +409,7 @@ async def checkPokeNum(pokeNum, ctx):
     # Starting embed
     processingEmbed = discord.Embed(title=f"Processing Command...", description=f"Please wait a couple of seconds.",
                                     timestamp=ctx.message.created_at, color=settings.defaultColor)
-    processingEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 2.0")
+    processingEmbed.set_footer(icon_url=botIcon, text="PSoP, version {settings.version}")
     processEdit = await ctx.send(embed=processingEmbed)
 
     # Random number?
@@ -456,8 +440,8 @@ async def checkPokeNum(pokeNum, ctx):
         pokeNum = str(pokeNum)
         requestedUrl = str("https://www.pokemon.com/us/pokedex/" + pokeNum)
         try:
-            connTest = urllib.request.urlopen(requestedUrl)
-        except urllib.error.HTTPError as e:
+            _connTest = request.urlopen(requestedUrl)
+        except error.HTTPError as e:
             msgTimestamp = str(ctx.message.created_at)
             msgTimestamp = msgTimestamp[11:19]
             print(
@@ -482,7 +466,7 @@ async def checkPokeNum(pokeNum, ctx):
         errorEmbed = discord.Embed(title=f"Error!",
                                    description=f":x: Sorry, we couldn't find that Pokemon! It might be a server issue or the Pokemon does not exist. You should use '-' if the Pokemon is separated by spaces.",
                                    timestamp=ctx.message.created_at, color=settings.defaultColor)
-        errorEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 2.0")
+        errorEmbed.set_footer(icon_url=botIcon, text=f"PSoP, version{settings.version}")
         await processEdit.edit(embed=errorEmbed)
         return False, processEdit
     else:
@@ -490,7 +474,7 @@ async def checkPokeNum(pokeNum, ctx):
         goodEmbed = discord.Embed(title=f"Pokemon Found!",
                                   description=f":white_check_mark: Alright, loading the pokemon now!",
                                   timestamp=ctx.message.created_at, color=settings.defaultColor)
-        goodEmbed.set_footer(icon_url=botIcon, text="PSoP, ver 2.0")
+        goodEmbed.set_footer(icon_url=botIcon, text="PSoP, version{settings.version}")
         await processEdit.edit(embed=goodEmbed)
 
         await asyncio.sleep(1)
@@ -502,6 +486,7 @@ async def checkPokeNum(pokeNum, ctx):
 async def getColoredEmbed(htmlSpoon):  # pokedex-pokemon-attributes
     htmlColor = 0x6338E1
     spoonedDiv = htmlSpoon.find('div', {"class": "dtm-type"})
+
     # Kill me, cases wouldn't work here for some reason, cover your eyes!
     if spoonedDiv.find_all("li", {"class": "background-color-fire"}):
         htmlColor = 0xE04938
@@ -542,86 +527,28 @@ async def getColoredEmbed(htmlSpoon):  # pokedex-pokemon-attributes
     return htmlColor
 
 
-# 'Easter eggs' woo-ho!
-async def checkEaster(pokeNum):
-    match pokeNum:
-        case "134":  # Vaporeon
-            return "Hey guys, did you know that in terms of male human and female Pokémon breeding, Vaporeon is the most compatible Pokémon for humans? Not only are they in the field e-"
-        case "132":  # Ditto
-            return "Sorry, no description for you. This one's overrated."
-        case "758":  # Salazzle
-            return "Poof."
-        case "448":  # Lucario
-            return "Now this is something different i'd say."
-        case "448":  # Lucario
-            return "Now this is something different i'd say."
-        case "133":  # Eevee
-            return "Eevee my beloved, one of the best mons by far."
-        case "872":  # Snom
-            return "This is the most adorable pokemon in the entire pokedex, you cannot change my mind."
-        case "815":  # Cinderace
-            return "*Music starts*, HAHAHA. Ronaldinho socceeeeeeeeer!"
-        case "428":  # Lopunny
-            return "Does this technically make me a furry? - Markiplier 2022"
-        case "706":  # Goodra
-            return "No comments, dunno why people like Goodra that much."
-        case "655":  # Delphox
-            return "Now that's hot. Haha, ha, haha.. Get it?"
-        case "015":  # Beedrill
-            return "That's some masochist material over here, ain't I right?"
-        case "069":  # Bellsprout
-            return "Nice."
-        case "071":  # Victreebel
-            return "That, uhhh, that doesn't look safe at all."
-        case "121":  # Starmie
-            return "[3 AM CHALLENGE] Me when dot is inside a discord bot (real) **police called** 4k FREE DOWNLOAD."
-        case "197", "196":  # Espeon+Umbreon
-            return "Love them both :heart:"
-        case "250":  # Ho-Oh
-            return "Ho-Oh, you're approaching me? Well. Then come as close as you'd like!"
-        case "282":  # Gardevoir
-            return "Too good to be true."
-        case "329":  # Vibrava
-            return "Underrated pokemon, give it some love!"
-        case "463":  # Lickilicky
-            return "Wh- NINTENDO."
-        case "545":  # Scolipede
-            return "This will kill you, don't even think about it."
-        case "563":  # Cofagrigus
-            return "The 'Coffin Pokemon'. You can already tell."
-        case "596":  # Galvantula
-            return "THE GIANT ENEMY SPIDER *music*"
-        case "778":  # Mimikyu
-            return "Actually, I won't judge you on this one. Looks interesting."
-        case "807":  # Zeraora
-            return "A classic, of course."
-        case "865":  # Sirfetch'd
-            return "You pet the doggo, it's neck grew bigger."
-        case "700":  # Sylveon
-            return "Best eeveelution, I'm 100% Based."
-        case _:
-            return None
-
-
-# Load database, this has to be located on '/database' and must have the two specified json files.
-# This is local, you can migrate this into an external database, but this is fine.
-def _load():
-    global passed
+# Loads the smashed and passed Pokémon from the MySQL db.
+def loadDB(pokeNum: str):
     global smashed
-    with open("database/passed.json") as f:
-        passed = json.load(f)
-    with open("database/smashed.json") as f:
-        smashed = json.load(f)
+    global passed
+    with db.cursor() as cursor:
+        selQuery = f"SELECT * FROM SP WHERE id = %s"
+        cursor.execute(selQuery, int(pokeNum))
+        sqlDict = cursor.fetchone()
+        smashed = sqlDict[1]
+        passed = sqlDict[2]
 
 
-# Save database, this has to be located on '/database' and must have the two specified json files.
-# This is local, you can migrate this into an external database, but this is fine.
-def _save():
-    with open("database/passed.json", 'w') as f:
-        json.dump(passed, f, indent=4)
-    with open("database/smashed.json", 'w') as f:
-        json.dump(smashed, f, indent=4)
+# Saves one of the user's choice into the MySQL db.
+def updDB(pokeNum: str, sop: str):
+    with db.cursor() as cursor:
+        updateQuery = ""
+        if sop.lower() == "smashed":
+            updateQuery = f"UPDATE SP SET smashed = smashed + 1 WHERE id = %s"
+        elif sop.lower() == "passed":
+            updateQuery = f"UPDATE SP SET passed = passed + 1 WHERE id = %s"
+        cursor.execute(updateQuery, int(pokeNum))
 
 
 # Starts the bot. Yep, that's it.
-    client.run("YOUR TOKEN HERE")
+client.run(dotenv_values()["BOT_TOKEN"])
