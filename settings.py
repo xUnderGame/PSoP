@@ -1,2 +1,3 @@
-#Embed colors
-infocolor = 0x6338E1
+# Embed colors
+defaultColor = 0x6338E1
+maxNum = 905
