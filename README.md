@@ -1,14 +1,14 @@
 # PSoP, the Discord Chatbot
 The public "*Pokemon Smash or Pass*" Github repository. It uses the BeautifulSoup (bs4), requests, discord.py, pymysql and python-dotenv. 
 
-If you are looking forward on using the bot, please note that this isn't supported for newer pokemons (**as of now, maximum is 905**), therefore you will need to edit the 'maxNum' variable located in 'settings.py'.
+If you are looking forward on using the bot and newer pokemons are released, you will need to edit the 'maxNum' variable located in 'settings.py', and add all the values into the MySQL database. Those being manually inserted or with a script.
 
 Enjoy! (Please, credit me if you use the source code in any way).
 
 ## How to use for yourself?
 If you'd like to skip this entirely, you can invite the always 24/7 bot that can be found by [clicking here](https://top.gg/bot/942443498915909683). 
 
-Alternatively, you can follow the steps below to self-host the bot.
+Alternatively, you can follow the steps below to self-host the bot. (I don't recommend this at all)
 ```
 Step 1: Download the repository files using the "CODE" tab and clicking on "Download ZIP" or selecting the link at the bottom of this page.
 
@@ -38,4 +38,4 @@ You can use Amazon AWS, Google Cloud, Firebase... They have some great tutorials
 There is a hard-cap on the pokemon ID, you can see it in the file "settings.py" and change it to your liking.
 
 ### Where do I download the bot?
-Click [here](https://github.com/xUnderGame/PSoP/releases/tag/v3.0.0) to download the lastest version of this bot.
+Click [here](https://github.com/xUnderGame/PSoP/releases/tag/v4.0.0) to download the lastest release of this bot.
