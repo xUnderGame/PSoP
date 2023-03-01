@@ -106,6 +106,7 @@ async def repo(ctx):
 @client.command(aliases=["settings", "change", "toggles", "pref", "sett"])
 async def preferences(ctx, option: str = None, change: str = None):
     options = ["setfav", "showprev"]
+    notImplemented = "(Not implemented as of now)"
 
     # Logic gate before entering
     if option is None or option.lower() not in options:
@@ -129,10 +130,10 @@ async def preferences(ctx, option: str = None, change: str = None):
     elif change and option.lower() == "showprev":
         # Change the setting.
         if change.lower() in ["off", "false", "disable"]:
-            prevEmbed = makeEmbed(ctx, "Setting Updated", "You will no longer see recent pokemons when using the random parameter.")
+            prevEmbed = makeEmbed(ctx, "Setting Updated", f"You will no longer see recent pokemons when using the random parameter. {notImplemented}")
             dbUpdatePrev(ctx, False)
         elif change.lower() in ["on", "true", "enable"]:
-            prevEmbed = makeEmbed(ctx, "Setting Updated", "You will now start to see recent pokemons when using the random parameter.")
+            prevEmbed = makeEmbed(ctx, "Setting Updated", f"You will now start to see recent pokemons when using the random parameter. {notImplemented}")
             dbUpdatePrev(ctx, True)
         else:
             badEmbed = makeEmbed(ctx, "Preferences Error!", "Invalid toggle given. It must be 'true/on' or 'false/off'.")
@@ -154,7 +155,7 @@ async def stats(ctx):
     favPokeNum = str(checkPokeImage(str(dbGetFavPoke(ctx)[0])))
 
     # Embed
-    statsEmbed, pokeImage = makeEmbed(ctx, f"{ctx.author.name}'s Stats.", "Take a look at your personal stats and cool info about your time with the bot!", favPokeNum)
+    statsEmbed, pokeImage = makeEmbed(ctx, f"{ctx.author.name}'s Stats.", "Take a look at your personal stats and cool info about your time with the bot! (Favourite Pokemon is randomized once if unset.)", favPokeNum)
     statsEmbed.add_field(name="Total Smashed", value=f"{smashPass[0][0]} Pokemons smashed. (All time)", inline=True)
     statsEmbed.add_field(name="Total Passed", value=f"{smashPass[0][1]} Pokemons passed. (All time)", inline=True)
     statsEmbed.add_field(name="Favourite Pokemon", value=f"Your favourite Pokemon is {favPokeNum}.", inline=True)
@@ -222,7 +223,7 @@ async def pokeSmash(ctx, number: str):
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldSmash}` users would now SMASH this pokemon.", inline=True)
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldPass}` users would pass this pokemon.", inline=True)
     statusEmbed.add_field(name="Smashed!", value=f"You would smash this pokemon, heck yeah.", inline=False)
-    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, version 4.0")
+    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, version 4.1")
     await deleteEmbed.delete()
     await ctx.send(file=pokeImage, embed=statusEmbed)
 
@@ -259,7 +260,7 @@ async def pokePass(ctx, number: str):
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldSmash}` users would SMASH this pokemon.", inline=True)
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldPass}` users would now pass this pokemon.", inline=True)
     statusEmbed.add_field(name="Passed!", value=f"You wouldn't smash this pokemon. That's good.", inline=False)
-    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, version 4.0")
+    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, version 4.1")
     await deleteEmbed.delete()
     await ctx.send(file=pokeImage, embed=statusEmbed)
 
@@ -348,7 +349,7 @@ async def check(ctx, number: str = "random"):
 def makeEmbed(ctx, title: str, description: str, image: str=None, statusColor=settings.defaultColor):
     embed = discord.Embed(title=title, description=description,
                               timestamp=ctx.message.created_at, color=statusColor)
-    embed.set_footer(icon_url=botIcon, text="PSoP, version 4.0")
+    embed.set_footer(icon_url=botIcon, text="PSoP, version 4.1")
 
     # Check if we want an image
     if image:
@@ -698,6 +699,13 @@ def dbSmashPass(pokeNum: str, sop: str, ctx):
 # Gets the smashed and passed count from an user.
 def dbGetUserSmashPass(ctx):
     with db.cursor() as cursor:
+        # Check if an user exists.
+        updateQuery = f"SELECT id FROM USERS WHERE id = {int(ctx.author.id)}"
+        cursor.execute(updateQuery)
+        searchResult = cursor.fetchone()
+        if not searchResult:
+            dbCreateUser(ctx)
+
         selectQuery = f"SELECT smashed, passed FROM USERS WHERE id = {int(ctx.author.id)}"
         cursor.execute(selectQuery)
         return cursor.fetchall()
