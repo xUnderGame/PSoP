@@ -14,13 +14,13 @@ from dotenv import dotenv_values
 
 import settings
 
-# Defining Client
+# Defining Client.
 intents = discord.Intents.all()
 client = commands.Bot(command_prefix="sp!", help_command=None,
                       case_insensitive=True, intents=intents)
 
 
-# On ready event
+# On ready event.
 @client.event
 async def on_ready():
     await client.change_presence(status=discord.Status.online, activity=discord.Game("sp!help | pokemon.com"))
@@ -34,7 +34,7 @@ async def on_ready():
     print(" > Latency: " + str(client.latency)[0:4] + "ms")
     print("====== App Stuff ======")
 
-    # Connect to the database
+    # Connect to the database.
     dbConnect()
     try:
         if db:
@@ -45,7 +45,7 @@ async def on_ready():
         pass
 
 
-# Error handler
+# Error handler.
 @client.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MemberNotFound):
@@ -78,14 +78,14 @@ async def on_command_error(ctx, error):
         raise error
 
 
-# Help Command
+# Help Command.
 @client.command(aliases=["prefix", "psop", "sop", "commands", "cmd"])
 async def help(ctx):
     embed = makeEmbed(ctx, "PSoP Commands", "`help`, `check`, `smash`, `pass`, `preferences`, `stats`, `potd`, `top`, `info`, `repo`")
     await ctx.send(embed=embed)
 
 
-# Info command
+# Info command.
 @client.command(aliases=["information", "credits"])
 async def info(ctx):
     embed = makeEmbed(ctx, "Information", "Thank you for adding the bot! This is one of my small projects, and I plan to keep on updating this semi-regularly.\nIf you'd like to check it out, you can use the `repo` command to see the source code.\nBot was made so it uses [requests](https://pypi.org/project/requests), [pymysql](https://pypi.org/project/PyMySQL) and [bs4](https://pypi.org/project/beautifulsoup4) to access the images from the [pokemon.com](https://pokemon.com/pokedex) pokedex. This was made in python by **UnderGame#4540**. Feel free to contact me, and I hope you have fun!")
@@ -95,20 +95,25 @@ async def info(ctx):
     await ctx.send(embed=embed)
 
 
-# Repository command
+# Repository command.
 @client.command(aliases=["repository", "git", "github", "code", "source"])
 async def repo(ctx):
     embed = makeEmbed(ctx, "Github Repo", "Check out the github repository [here](https://github.com/xUnderGame/PSoP)! If you wish to join the support discord, feel free to do so by clicking [here](https://discord.com/invite/Az7skvA2mf).")
     await ctx.send(embed=embed)
 
 
-# Preferences command
+# Preferences command.
 @client.command(aliases=["settings", "change", "toggles", "pref", "sett"])
 async def preferences(ctx, option: str = None, change: str = None):
     options = ["setfav", "showprev"]
     notImplemented = "(Not implemented as of now)"
 
-    # Logic gate before entering
+    # Check if a database is up and working.
+    if not db:
+        await ctx.send("Sorry, we aren't able to load the database right now. Try again later!")
+        return
+
+    # Logic gate before entering.
     if option is None or option.lower() not in options:
         badEmbed = makeEmbed(ctx, "Preferences Error!", f"Invalid option. Use any of the available options: `{options[0]}`, `{options[1]}`.")
         await ctx.send(embed=badEmbed)
@@ -122,7 +127,7 @@ async def preferences(ctx, option: str = None, change: str = None):
             await ctx.send(embed=badEmbed)
             return
 
-        # Updates the user's fav pokemon
+        # Updates the user's fav pokemon.
         dbUpdateFav(ctx, number)
         favEmbed = makeEmbed(ctx, "Favorites Updated", f"Your new favorite pokemon has been set to {number}!")
         await editEmbed.edit(embed=favEmbed)
@@ -147,14 +152,19 @@ async def preferences(ctx, option: str = None, change: str = None):
         await ctx.send(embed=badEmbed)
 
 
-# Fav user poke command & stats
+# Fav user poke command & stats.
 @client.command()
 async def stats(ctx):
-    # Get the information needed
+    # Check if a database is up and working.
+    if not db:
+        await ctx.send("Sorry, we aren't able to load the database right now. Try again later!")
+        return
+    
+    # Get the information needed.
     smashPass = dbGetUserSmashPass(ctx)
     favPokeNum = str(checkPokeImage(str(dbGetFavPoke(ctx)[0])))
 
-    # Embed
+    # Embed.
     statsEmbed, pokeImage = makeEmbed(ctx, f"{ctx.author.name}'s Stats.", "Take a look at your personal stats and cool info about your time with the bot! (Favourite Pokemon is randomized once if unset.)", favPokeNum)
     statsEmbed.add_field(name="Total Smashed", value=f"{smashPass[0][0]} Pokemons smashed. (All time)", inline=True)
     statsEmbed.add_field(name="Total Passed", value=f"{smashPass[0][1]} Pokemons passed. (All time)", inline=True)
@@ -162,10 +172,10 @@ async def stats(ctx):
     await ctx.send(file=pokeImage, embed=statsEmbed)
 
 
-# Fav user poke command & stats
+# Fav user poke command & stats.
 @client.command(aliases=["top", "lb", "most", "highest"])
 async def leaderboard(ctx):
-    # Get the information needed
+    # Get the information needed.
     hardCap = 9
     leaderboard = dbGetLeaderboard(hardCap)
     highestPoke = str(checkPokeImage(leaderboard[0][0]))
@@ -180,7 +190,7 @@ async def leaderboard(ctx):
 # Pokemon of the day command
 @client.command(aliases=["day", "daily", "potday", "pokeday"])
 async def potd(ctx):
-    # Calculate the pokemon of the day and send it (Day + Month + first two digits of the year + third digit + fourth)
+    # Calculate the pokemon of the day and send it. (Day + Month + first two digits of the year + third digit + fourth)
     cDate = datetime.now()
     day = cDate.day
     month = cDate.month
@@ -204,21 +214,21 @@ async def pokeSmash(ctx, number: str):
     number = str(number)
     number = checkPokeImage(number)
 
-    # Get pokemon info
+    # Get pokemon info.
     htmlSouped = getWebsite(number)
     pokeName = getPokeName(htmlSouped)
     pokeDesc = getPokeDesc(htmlSouped)
 
-    # Times Smashed/Passed + add the user entry
+    # Times Smashed/Passed + add the user entry.
     dbSmashPass(number, "smashed", ctx)
     dbPokeLoad(number)
     wouldSmash = pokemon[1]
     wouldPass = pokemon[2]
 
-    # Get the color of the embed
+    # Get the color of the embed.
     statusColor = await getColoredEmbed(htmlSouped)
 
-    # Prepare and send the embed with the image
+    # Prepare and send the embed with the image.
     statusEmbed, pokeImage = makeEmbed(ctx, pokeName, f"Description: {pokeDesc}", number, statusColor)
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldSmash}` users would now SMASH this pokemon.", inline=True)
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldPass}` users would pass this pokemon.", inline=True)
@@ -228,11 +238,11 @@ async def pokeSmash(ctx, number: str):
     await ctx.send(file=pokeImage, embed=statusEmbed)
 
 
-# Pass command
+# Pass command.
 @client.command(aliases=["p", "pass", "passPoke", "pokemonPass", "passPokemon"])
 @commands.cooldown(1, 10, commands.BucketType.user)
 async def pokePass(ctx, number: str):
-    # Check for the number
+    # Check for the number.
     number, deleteEmbed = await checkPokeNum(number, ctx, True)
     if number is False:
         return
@@ -241,21 +251,21 @@ async def pokePass(ctx, number: str):
     number = str(number)
     number = checkPokeImage(number)
 
-    # Get pokemon info
+    # Get pokemon info.
     htmlSouped = getWebsite(number)
     pokeName = getPokeName(htmlSouped)
     pokeDesc = getPokeDesc(htmlSouped)
 
-    # Times Smashed/Passed + add the user entry
+    # Times Smashed/Passed + add the user entry.
     dbSmashPass(number, "passed", ctx)
     dbPokeLoad(number)
     wouldSmash = pokemon[1]
     wouldPass = pokemon[2]
 
-    # Get the color of the embed
+    # Get the color of the embed.
     statusColor = await getColoredEmbed(htmlSouped)
 
-    # Prepare and send the embed with the image
+    # Prepare and send the embed with the image.
     statusEmbed, pokeImage = makeEmbed(ctx, pokeName, f"Description: {pokeDesc}", number, statusColor)
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldSmash}` users would SMASH this pokemon.", inline=True)
     statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldPass}` users would now pass this pokemon.", inline=True)
@@ -265,11 +275,11 @@ async def pokePass(ctx, number: str):
     await ctx.send(file=pokeImage, embed=statusEmbed)
 
 
-# Check command
+# Check command.
 @client.command(aliases=["c", "pokemon", "poke"])
 @commands.cooldown(1, 15, commands.BucketType.user)
 async def check(ctx, number: str = "random"):
-    # Check for the number
+    # Check for the number.
     number, deleteEmbed = await checkPokeNum(number, ctx, True)
     if number is False:
         return
@@ -278,7 +288,7 @@ async def check(ctx, number: str = "random"):
     number = str(number)
     number = checkPokeImage(number)
 
-    # Open page and stuff
+    # Open page and stuff.
     htmlSouped = getWebsite(number)
 
     # Let's find the Pokemon information...
@@ -289,15 +299,15 @@ async def check(ctx, number: str = "random"):
     pokeHeight = getPokeHeight(htmlSouped)
     pokeWeight = getPokeWeight(htmlSouped)
 
-    # Times Smashed/Passed
+    # Times Smashed/Passed.
     dbPokeLoad(number)
     wouldSmash = pokemon[1]
     wouldPass = pokemon[2]
 
-    # Get the color of the embed
+    # Get the color of the embed.
     statusColor = await getColoredEmbed(htmlSouped)
 
-    # Prepare and send the embed with the image
+    # Prepare and send the embed with the image.
     statusEmbed, pokeImage = makeEmbed(ctx, pokeName, f"Description: {pokeDesc}", number, statusColor)
     statusEmbed.add_field(name="Gender", value=f"{pokeGender}", inline=True)
     statusEmbed.add_field(name="Height", value=f"{pokeHeight}", inline=True)
@@ -316,16 +326,16 @@ async def check(ctx, number: str = "random"):
     def reactionCheck(reaction, user):
         return reaction.message.id == pokeEmbed.id and str(reaction.emoji) in ["👊", "💔"] and user == ctx.author
 
-    # Reaction Time
+    # Reaction Time.
     try:
         reactionUsed = await client.wait_for('reaction_add', timeout=30.0, check=reactionCheck)
         
-        # Check if more people reacted to the message
+        # Check if more people reacted to the message.
         extraEmbed = ""
         if reactionUsed[0].count > 2:
             extraEmbed = f"and {reactionUsed[0].count-2} people "
 
-        # Smash or pass thing
+        # Smash or pass thing.
         if reactionUsed[0].emoji == "👊":
             statusEmbed.add_field(name=f"👊 You {extraEmbed}would SMASH that pokemon!",
                                   value="Your choice has been saved into the database.", inline=True)
@@ -351,7 +361,7 @@ def makeEmbed(ctx, title: str, description: str, image: str=None, statusColor=se
                               timestamp=ctx.message.created_at, color=statusColor)
     embed.set_footer(icon_url=botIcon, text="PSoP, version 4.1")
 
-    # Check if we want an image
+    # Check if we want an image.
     if image:
         checkPokeImage(image)
         image = discord.File(f"images/{image}.png", filename="pokemon.png")
@@ -368,8 +378,8 @@ def addZeroLeft(number):
 
 # Fetches the website and parses it, returning it.
 def getWebsite(number):
-    pokeUrl = str("https://www.pokemon.com/us/pokedex/" + number)  # The URL we are using
-    pokeRequest = requests.get(pokeUrl, headers={"User-Agent": "Mozilla/5.0"})  # Requests access
+    pokeUrl = str("https://www.pokemon.com/us/pokedex/" + number)  # The URL we are using.
+    pokeRequest = requests.get(pokeUrl, headers={"User-Agent": "Mozilla/5.0"})  # Requests access.
     # Parses the ENTIRE page and returns it
     return BeautifulSoup(pokeRequest.text, 'html.parser')
 
@@ -381,7 +391,7 @@ def checkPokeImage(number: str):
     # Check if the image already exists, and so we don't download it again.
     fileCheck = os.path.exists("images/" + str(number) + ".png")
     if fileCheck is False:
-        # Do the request (And download the file locally)
+        # Do the request. (And download the file locally)
         requestedUrl = str("https://assets.pokemon.com/assets/cms2/img/pokedex/full/" + str(number) + ".png")
         request.urlretrieve(requestedUrl, "images/" + str(number) + ".png")
     return number
@@ -392,16 +402,16 @@ def getPokeName(htmlSpoon):
     pokeName = ""
 
     # Let's find the Pokémon name!
-    # Finds the specific class
+    # Finds the specific class.
     spoonedDiv = htmlSpoon.find('div', {"class": "pokedex-pokemon-pagination-title"})
 
     # Fiddle with rawString
     try:
-        # Gets the text from the specific class
+        # Gets the text from the specific class.
         rawString = str(spoonedDiv.text)
-        rawString = rawString.replace("\n", "")  # Removes newlines
-        pokeList = rawString.split()  # Splits it into a list
-        for num in range(len(pokeList)):  # Iterates in the list
+        rawString = rawString.replace("\n", "")  # Removes newlines.
+        pokeList = rawString.split()  # Splits it into a list.
+        for num in range(len(pokeList)):  # Iterates in the list.
             # Adds the names together, useful if the Pokémon has more than one name.
             pokeName = pokeName + pokeList[num]
             return pokeName
@@ -414,7 +424,7 @@ def getPokeDesc(htmlSpoon):
     # Let's find the pokemon description...
     spoonedDiv = htmlSpoon.find('p', {"class": "version-x"})
 
-    # Fiddle with rawString
+    # Fiddle with rawString.
     rawString = str(spoonedDiv.text)
     pokeDesc = rawString.lstrip()
     return pokeDesc
@@ -431,7 +441,7 @@ def getPokeGenders(htmlSpoon):
     if htmlSpoon.find_all("i", {'class': {'icon_female_symbol'}}):
         doFemale = True
 
-    # Check for genders
+    # Check for genders.
     if doMale is True and doFemale is False:
         pokeGender = ":male_sign: Male"
     elif doFemale is True and doMale is True:
@@ -468,7 +478,7 @@ def getPokeHeight(htmlSpoon):
     rawString = str(spoonedDiv.text)
     pokeRegex = rawString.replace("\n", "")
 
-    # Fiddle with rawString
+    # Fiddle with rawString.
     pokeHeight = re.search('Height(.*)Weight', pokeRegex)
     pokeHeight = str(pokeHeight.group(1))
     return pokeHeight
@@ -481,7 +491,7 @@ def getPokeWeight(htmlSpoon):
     rawString = str(spoonedDiv.text)
     pokeRegex = rawString.replace("\n", "")
 
-    # Fiddle with rawString (Again, again, again, again...!)
+    # Fiddle with rawString. (Again, again, again, again...!)
     pokeWeight = re.search('Weight(.*)Gender', pokeRegex)
     pokeWeight = str(pokeWeight.group(1))
     return pokeWeight
@@ -491,7 +501,7 @@ def getPokeWeight(htmlSpoon):
 async def checkPokeNum(pokeNum, ctx, doEmbed: bool = True):
     badNumber = False
 
-    # Starting embed
+    # Starting embed.
     processingEmbed = makeEmbed(ctx, "Processing Command...", "Please wait a couple of seconds.")
     processEdit = await ctx.send(embed=processingEmbed)
 
@@ -505,11 +515,11 @@ async def checkPokeNum(pokeNum, ctx, doEmbed: bool = True):
         if pokeNum > settings.maxNum or pokeNum < 1:
             badNumber = True
 
-    # Number length and stuff
+    # Number length and stuff.
     if len(str(pokeNum)) > 0 and len(str(pokeNum)) < 5 and not str(pokeNum).isdigit() and badNumber is not True:
         badNumber = True
 
-    # Check if not 404
+    # Check if not 404.
     if not badNumber:
         pokeNum = str(pokeNum)
         requestedUrl = str("https://www.pokemon.com/us/pokedex/" + pokeNum)
@@ -522,21 +532,22 @@ async def checkPokeNum(pokeNum, ctx, doEmbed: bool = True):
                   pokeNum + " || Timestamp: " + msgTimestamp + " <<")
             badNumber = True
 
-    # Get the number if it's a valid string
+    # Get the number if it's a valid string.
     if not badNumber and not pokeNum.isdigit():
         htmlSouped = getWebsite(pokeNum)
-        spoonedDiv = htmlSouped.find('div', {"class": "pokedex-pokemon-pagination-title"})  # Finds the specific class
+        spoonedDiv = htmlSouped.find('div', {"class": "pokedex-pokemon-pagination-title"})  # Finds the specific class.
         try:
             # Finds the specific class
             spoonedDiv = spoonedDiv.find('span', {"class": "pokemon-number"})
-            # Gets the text from the specific class
+
+            # Gets the text from the specific class.
             rawString = str(spoonedDiv.text)
-            rawString = rawString.replace("\n", "")  # Removes newlines
+            rawString = rawString.replace("\n", "")  # Removes newlines.
             pokeNum = str(rawString[1:])
         except:
             badNumber = True
 
-    # If bad then exit
+    # If bad then exit.
     if badNumber:
         if doEmbed: 
             errorEmbed = makeEmbed(ctx, "Error!", ":x: Sorry, we couldn't find that Pokemon! It might be a server issue or the Pokemon does not exist. You should use '-' if the Pokemon is separated by spaces.")
@@ -553,7 +564,7 @@ async def checkPokeNum(pokeNum, ctx, doEmbed: bool = True):
 
 
 # Colored embed definition.
-async def getColoredEmbed(htmlSpoon):  # pokedex-pokemon-attributes
+async def getColoredEmbed(htmlSpoon):  # pokedex-pokemon-attributes.
     spoonedDiv = htmlSpoon.find('div', {"class": "dtm-type"})
 
     # Cases wouldn't work here for some reason, cover your eyes!
@@ -608,6 +619,16 @@ def dbConnect():
     except:
         pass
 
+
+# Check if the user exists
+def dbCheckUser(ctx):
+    if db and db.open:
+        with db.cursor() as cursor:
+            updateQuery = f"SELECT id FROM USERS WHERE id = {int(ctx.author.id)}"
+            cursor.execute(updateQuery)
+            searchResult = cursor.fetchone()
+            if not searchResult:
+                dbCreateUser(ctx)
 
 # Creates a row into USER with the user's information & generates a random favPoke entry.
 def dbCreateUser(ctx):
@@ -668,15 +689,11 @@ def dbPokeLoad(pokeNum: str):
 
 # Saves one of the user's choice into the MySQL db.
 def dbSmashPass(pokeNum: str, sop: str, ctx):
+    # Create an user?
+    dbCheckUser(ctx)
+    
     if db and db.open and pokeNum and (sop.lower() == "smashed" or sop.lower() == "passed"):
         with db.cursor() as cursor:
-            # Create an user?
-            updateQuery = f"SELECT id FROM USERS WHERE id = {int(ctx.author.id)}"
-            cursor.execute(updateQuery)
-            searchResult = cursor.fetchone()
-            if not searchResult:
-                dbCreateUser(ctx)
-
             # Add entry to SP table.
             if sop.lower() == "smashed":
                 updateQuery = f"UPDATE SP SET smashed = smashed + 1 WHERE id = {int(pokeNum)}"
@@ -687,11 +704,9 @@ def dbSmashPass(pokeNum: str, sop: str, ctx):
             cursor.execute(updateQuery)
 
             # Update USERS smashed/passed.
-            if not searchResult:
-                return
-            if int(ctx.author.id) in searchResult and sop.lower() == "smashed":
+            if sop.lower() == "smashed":
                 updateQuery = f"UPDATE USERS SET smashed = smashed + 1 WHERE id = {int(ctx.author.id)}"
-            elif int(ctx.author.id) in searchResult and sop.lower() == "passed":
+            elif sop.lower() == "passed":
                 updateQuery = f"UPDATE USERS SET passed = passed + 1 WHERE id = {int(ctx.author.id)}"
             cursor.execute(updateQuery)
 
