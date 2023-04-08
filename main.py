@@ -55,7 +55,7 @@ async def on_command_error(ctx, error):
 
     elif isinstance(error, commands.CommandOnCooldown):
         embed = discord.Embed(title="Cooldown!",
-                              description="Command on cooldown, you'll be able to use this command again in **{:.0f+1}s**".format(error.retry_after))
+                              description="Command on cooldown, you'll be able to use this command again in **{:.0f}s**".format(error.retry_after+1))
         await ctx.send(embed=embed)
 
     elif isinstance(error, commands.MissingRequiredArgument):
