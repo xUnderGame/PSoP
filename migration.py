@@ -352,18 +352,26 @@ async def check(ctx, number: str = "random"):
     statusColor = await getColoredEmbed(htmlSouped)
 
     # Prepare the buttons.
-    buttons =[
-        interactions.ActionRow( # https://discord.com/developers/docs/resources/emoji#emoji-object
+    buttons = [
+        interactions.ActionRow(
             components=[
                 interactions.Button(
-                    style=interactions.ButtonStyle.PRIMARY,
+                    style=interactions.ButtonStyle.DANGER,
                     label="Smash",
-                    custom_id="smash"
+                    custom_id="smash",
+                    emoji={
+                        "id": None,
+                        "name": "👊"
+                    }
                 ),
                 interactions.Button(
-                    style=interactions.ButtonStyle.DANGER,
+                    style=interactions.ButtonStyle.SUCCESS,
                     label="Pass",
-                    custom_id="pass"
+                    custom_id="pass",
+                    emoji={
+                        "id": None,
+                        "name": "💔"
+                    }
                 )
             ]
         )
@@ -382,43 +390,35 @@ async def check(ctx, number: str = "random"):
 
     # Reaction Time.
     try:
-        def buttonCheck(button, user):
-            return button.message.id == pokeEmbed.id and button.custom_id in ["smash", "pass"] and user == ctx.author
+        def buttonCheck(button):
+            return button.custom_id in ["smash", "pass"] and button.member == ctx.author
     
-        btn, user = await client.wait_for(
-            "button_click",
+        btn = await client.wait_for_component(
+            components=buttons,
+            messages=pokeEmbed.id,
             check = buttonCheck,
             timeout=30.0
         )
-
-        if btn.custom_id == "smash":
-            await ctx.send(content="smashed", ephemeral=False)
-        else:
-            await ctx.send(content="passed", ephemeral=False)
         
         # Check if more people reacted to the message.
-        # extraEmbed = ""
+        extraEmbed = ""
         # if reactionUsed[0].count > 2:
         #     extraEmbed = f"and {reactionUsed[0].count-2} people "
 
-        # # Smash or pass thing.
-        # if reactionUsed[0].emoji == "👊":
-        #     statusEmbed.add_field(name=f"👊 You {extraEmbed}would SMASH that pokemon!",
-        #                           value="Your choice has been saved into the database.", inline=True)
-        #     dbSmashPass(number, "smashed", ctx)
+        # Edit the thing
+        await btn.disable_all_components()
 
-        # elif reactionUsed[0].emoji == "💔":
-        #     statusEmbed.add_field(name=f"💔 You {extraEmbed}would pass that pokemon.",
-        #                           value="Your choice has been saved into the database.", inline=True)
-        #     dbSmashPass(number, "passed", ctx)
+        # Smash or pass thing.
+        if btn.custom_id == "smash":
+            await ctx.send(f"👊 You {extraEmbed}would SMASH that pokemon! (Your choice has been saved into the database)")
+            dbSmashPass(number, "smashed", ctx)
+        else:
+            await ctx.send(f"💔 You {extraEmbed}would pass that pokemon. (Your choice has been saved into the database)")
+            dbSmashPass(number, "passed", ctx)
 
     # Timeout, do nothing.
     except asyncio.TimeoutError:
-        statusEmbed.add_field(
-            name="Timed out", value=f"Reacting won't do anything anymore.", inline=True)
-
-    # Edit the thing
-    await pokeEmbed.edit(embeds=statusEmbed)
+        await ctx.send("Timed out. Reacting won't do anything anymore.")
 
 
 # Makes an embed with the given parameters.
