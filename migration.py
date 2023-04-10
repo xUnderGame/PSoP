@@ -17,7 +17,6 @@ import settings
 _ready: bool = False
 intents = interactions.Intents.ALL
 client = interactions.Client(token=dotenv_values()["BOT_TOKEN"],intents=intents)
-client.load('interactions.ext.files')
 
 
 # On ready event.
@@ -51,7 +50,7 @@ async def on_ready():
 @client.command(
     name = "help",
     description = "Lists all of the bot's commands.",
-    scope = 771651788134547456,
+    scope = 771651788134547456
 )
 async def help(ctx: interactions.CommandContext):
     embed = makeEmbed(ctx, "PSoP Commands", "`help`, `check`, `smash`, `pass`, `preferences`, `stats`, `potd`, `top`, `info`, `repo`")
@@ -62,7 +61,7 @@ async def help(ctx: interactions.CommandContext):
 @client.command(
     name = "info",
     description = "Shows information about this bot.",
-    scope = 771651788134547456,
+    scope = 771651788134547456
 )
 async def info(ctx: interactions.CommandContext):
     embed = makeEmbed(ctx, "Information", "Thank you for adding the bot! This is one of my small projects, and I plan to keep on updating this semi-regularly.\nIf you'd like to check it out, you can use the `repo` command to see the source code.\nBot was made so it uses [requests](https://pypi.org/project/requests), [pymysql](https://pypi.org/project/PyMySQL) and [bs4](https://pypi.org/project/beautifulsoup4) to access the images from the [pokemon.com](https://pokemon.com/pokedex) pokedex. This was made in python by **UnderGame#4540**. Feel free to contact me, and I hope you have fun!")
@@ -98,9 +97,9 @@ async def repo(ctx: interactions.CommandContext):
                     name="number",
                     description="The pokemon number.",
                     type=interactions.OptionType.INTEGER,
-                    required=False,
-                ),
-            ],
+                    required=False
+                )
+            ]
         ),
         interactions.Option(
             name="previous",
@@ -111,11 +110,11 @@ async def repo(ctx: interactions.CommandContext):
                     name="toggle",
                     description="Insert a bool (true/false) to toggle this setting.",
                     type=interactions.OptionType.BOOLEAN,
-                    required=True,
-                ),
-            ],
-        ),
-    ],
+                    required=True
+                )
+            ]
+        )
+    ]
 )
 async def preferences(ctx: interactions.CommandContext, sub_command: str, toggle: bool = False, number: int = random.randrange(1, settings.maxNum+1)):
     notImplemented = "(Not implemented as of now)"
@@ -156,7 +155,7 @@ async def preferences(ctx: interactions.CommandContext, sub_command: str, toggle
 @client.command(
     name = "stats",
     description = "Shows your stats with the bot. Command usage and more!",
-    scope = 771651788134547456,
+    scope = 771651788134547456
 )
 async def stats(ctx: interactions.CommandContext):
     # Check if a database is up and working.
@@ -180,7 +179,7 @@ async def stats(ctx: interactions.CommandContext):
 @client.command(
     name = "leaderboard",
     description = "Replies back with a leaderboard containing the most smashed pokemons number.",
-    scope = 771651788134547456,
+    scope = 771651788134547456
 )
 async def leaderboard(ctx: interactions.CommandContext):
     # Get the information needed.
@@ -193,6 +192,233 @@ async def leaderboard(ctx: interactions.CommandContext):
     for poke in leaderboard:
         leaderEmbed.add_field(name=f"{poke[0]}", value=f"Was smashed a total of {poke[1]} times.", inline=True)
     await ctx.send(files=pokeImage, embeds=leaderEmbed)
+
+
+# Pokemon of the day command.
+@client.command(
+    name = "potd",
+    description = "Sends the pokemon of the day!",
+    scope = 771651788134547456,
+)
+async def potd(ctx: interactions.CommandContext):
+    # Calculate the pokemon of the day and send it. (Day + Month + first two digits of the year + third digit + fourth)
+    cDate = datetime.now()
+    day = cDate.day
+    month = cDate.month
+    year = str(cDate.year)
+
+    # Call check() to do the usual stuff.
+    total = day + month + int(year[0]+year[1]) + int(year[2]) + int(year[3])
+    await check(ctx, str(total))
+
+
+# Smash command
+@client.command(
+    name = "smash",
+    description = "Smash a pokemon of your choosing.",
+    scope = 771651788134547456,
+    options=[
+        interactions.Option(
+            name="number",
+            description="The pokemon number.",
+            type=interactions.OptionType.STRING,
+            required=False
+        )
+    ]
+)
+async def smash(ctx: interactions.CommandContext, number: str = "random"):
+    # Check for the number
+    number, deleteEmbed = await checkPokeNum(number, ctx, True)
+    if number is False:
+        return
+
+    # Checks if the image is already downloaded.
+    number = str(number)
+    number = checkPokeImage(number)
+
+    # Get pokemon info.
+    htmlSouped = getWebsite(number)
+    pokeName = getPokeName(htmlSouped)
+    pokeDesc = getPokeDesc(htmlSouped)
+
+    # Times Smashed/Passed + add the user entry.
+    dbSmashPass(number, "smashed", ctx)
+    dbPokeLoad(number)
+    wouldSmash = pokemon[1]
+    wouldPass = pokemon[2]
+
+    # Get the color of the embed.
+    statusColor = await getColoredEmbed(htmlSouped)
+
+    # Prepare and send the embed with the image.
+    statusEmbed, pokeImage = makeEmbed(ctx, pokeName, f"Description: {pokeDesc}", number, statusColor)
+    statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldSmash}` users would now SMASH this pokemon.", inline=True)
+    statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldPass}` users would pass this pokemon.", inline=True)
+    statusEmbed.add_field(name="Smashed!", value=f"You would smash this pokemon, heck yeah.", inline=False)
+    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, version 4.1")
+    await deleteEmbed.delete()
+    await ctx.send(files=pokeImage, embeds=statusEmbed)
+
+
+# Pass command.
+@client.command(
+    name = "pass",
+    description = "Pass a pokemon of your choosing.",
+    scope = 771651788134547456,
+    options=[
+        interactions.Option(
+            name="number",
+            description="The pokemon number.",
+            type=interactions.OptionType.STRING,
+            required=False
+        )
+    ]
+)
+async def pokePass(ctx: interactions.CommandContext, number: str = "random"):
+    # Check for the number.
+    number, deleteEmbed = await checkPokeNum(number, ctx, True)
+    if number is False:
+        return
+
+    # Checks if the image is already downloaded.
+    number = str(number)
+    number = checkPokeImage(number)
+
+    # Get pokemon info.
+    htmlSouped = getWebsite(number)
+    pokeName = getPokeName(htmlSouped)
+    pokeDesc = getPokeDesc(htmlSouped)
+
+    # Times Smashed/Passed + add the user entry.
+    dbSmashPass(number, "passed", ctx)
+    dbPokeLoad(number)
+    wouldSmash = pokemon[1]
+    wouldPass = pokemon[2]
+
+    # Get the color of the embed.
+    statusColor = await getColoredEmbed(htmlSouped)
+
+    # Prepare and send the embed with the image.
+    statusEmbed, pokeImage = makeEmbed(ctx, pokeName, f"Description: {pokeDesc}", number, statusColor)
+    statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldSmash}` users would SMASH this pokemon.", inline=True)
+    statusEmbed.add_field(name="Times Smashed:", value=f"`{wouldPass}` users would now pass this pokemon.", inline=True)
+    statusEmbed.add_field(name="Passed!", value=f"You wouldn't smash this pokemon. That's good.", inline=False)
+    statusEmbed.set_footer(icon_url=botIcon, text="PSoP, version 4.1")
+    await deleteEmbed.delete()
+    await ctx.send(files=pokeImage, embeds=statusEmbed)
+
+
+# Check command.
+@client.command(
+    name = "check",
+    description = "placeholder",
+    scope = 771651788134547456,
+    options=[
+        interactions.Option(
+            name="number",
+            description="The pokemon number.",
+            type=interactions.OptionType.STRING,
+            required=False
+        )
+    ]
+)
+async def check(ctx, number: str = "random"):
+    # Check for the number.
+    number, deleteEmbed = await checkPokeNum(number, ctx, True)
+    if number is False:
+        return
+
+    # Checks if the image is already downloaded.
+    number = str(number)
+    number = checkPokeImage(number)
+
+    # Open page and stuff.
+    htmlSouped = getWebsite(number)
+
+    # Let's find the Pokemon information...
+    pokeName = getPokeName(htmlSouped)
+    pokeDesc = getPokeDesc(htmlSouped)
+    pokeGender = getPokeGenders(htmlSouped)
+    pokeCategory = getPokeCategory(htmlSouped)
+    pokeHeight = getPokeHeight(htmlSouped)
+    pokeWeight = getPokeWeight(htmlSouped)
+
+    # Times Smashed/Passed.
+    dbPokeLoad(number)
+    wouldSmash = pokemon[1]
+    wouldPass = pokemon[2]
+
+    # Get the color of the embed.
+    statusColor = await getColoredEmbed(htmlSouped)
+
+    # Prepare the buttons.
+    buttons =[
+        interactions.ActionRow( # https://discord.com/developers/docs/resources/emoji#emoji-object
+            components=[
+                interactions.Button(
+                    style=interactions.ButtonStyle.PRIMARY,
+                    label="Smash",
+                    custom_id="smash"
+                ),
+                interactions.Button(
+                    style=interactions.ButtonStyle.DANGER,
+                    label="Pass",
+                    custom_id="pass"
+                )
+            ]
+        )
+    ]
+
+    # Prepare and send the embed with the image.
+    statusEmbed, pokeImage = makeEmbed(ctx, pokeName, f"Description: {pokeDesc}", number, statusColor)
+    statusEmbed.add_field(name="Gender", value=f"{pokeGender}", inline=True)
+    statusEmbed.add_field(name="Height", value=f"{pokeHeight}", inline=True)
+    statusEmbed.add_field(name="Weight", value=f"{pokeWeight}", inline=True)
+    statusEmbed.add_field(name="Category", value=f"{pokeCategory}", inline=True)
+    statusEmbed.add_field(name="Times Smashed", value=f"`{wouldSmash}` users would SMASH.", inline=True)
+    statusEmbed.add_field(name="Times Passed", value=f"`{wouldPass}` users would pass.", inline=True)
+    await deleteEmbed.delete()
+    pokeEmbed = await ctx.send(files=pokeImage, embeds=statusEmbed, components=buttons)
+
+    # Reaction Time.
+    try:
+        def buttonCheck(button, user):
+            return button.message.id == pokeEmbed.id and button.custom_id in ["smash", "pass"] and user == ctx.author
+    
+        btn, user = await client.wait_for(
+            "button_click",
+            check = buttonCheck,
+            timeout=30.0
+        )
+
+        if btn.custom_id == "smash":
+            await ctx.send(content="smashed", ephemeral=False)
+        else:
+            await ctx.send(content="passed", ephemeral=False)
+        
+        # Check if more people reacted to the message.
+        # extraEmbed = ""
+        # if reactionUsed[0].count > 2:
+        #     extraEmbed = f"and {reactionUsed[0].count-2} people "
+
+        # # Smash or pass thing.
+        # if reactionUsed[0].emoji == "👊":
+        #     statusEmbed.add_field(name=f"👊 You {extraEmbed}would SMASH that pokemon!",
+        #                           value="Your choice has been saved into the database.", inline=True)
+        #     dbSmashPass(number, "smashed", ctx)
+
+        # elif reactionUsed[0].emoji == "💔":
+        #     statusEmbed.add_field(name=f"💔 You {extraEmbed}would pass that pokemon.",
+        #                           value="Your choice has been saved into the database.", inline=True)
+        #     dbSmashPass(number, "passed", ctx)
+
+    # Timeout, do nothing.
+    except asyncio.TimeoutError:
+        statusEmbed.add_field(
+            name="Timed out", value=f"Reacting won't do anything anymore.", inline=True)
+
+    # Edit the thing
+    await pokeEmbed.edit(embeds=statusEmbed)
 
 
 # Makes an embed with the given parameters.
