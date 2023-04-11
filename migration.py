@@ -20,7 +20,7 @@ client = interactions.Client(token=dotenv_values()["BOT_TOKEN"],intents=intents)
 
 
 # On ready event.
-@client.event
+@interactions.listen()
 async def on_ready():
     global _ready
     if not _ready:
@@ -30,7 +30,7 @@ async def on_ready():
 
         # Prints and databases
         print("====== Bot Stats ======")
-        print(" > Logged in as:", str(client.me.name))
+        print(" > Logged in as:", str(client))
         print(" > Latency: " + str(client.latency)[0:4] + "ms")
         print("====== App Stuff ======")
 
@@ -47,23 +47,21 @@ async def on_ready():
 
 
 # Help Command.
-@client.command(
+@interactions.slash_command(
     name = "help",
-    description = "Lists all of the bot's commands.",
-    scope = 771651788134547456
+    description = "Lists all of the bot's commands."
 )
-async def help(ctx: interactions.CommandContext):
+async def help(ctx: interactions.SlashContext):
     embed = makeEmbed(ctx, "PSoP Commands", "`help`, `check`, `smash`, `pass`, `preferences`, `stats`, `potd`, `top`, `info`, `repo`")
     await ctx.send(embeds=embed)
 
 
 # Info command.
-@client.command(
+@interactions.slash_command(
     name = "info",
     description = "Shows information about this bot.",
-    scope = 771651788134547456
 )
-async def info(ctx: interactions.CommandContext):
+async def info(ctx: interactions.SlashContext):
     embed = makeEmbed(ctx, "Information", "Thank you for adding the bot! This is one of my small projects, and I plan to keep on updating this semi-regularly.\nIf you'd like to check it out, you can use the `repo` command to see the source code.\nBot was made so it uses [requests](https://pypi.org/project/requests), [pymysql](https://pypi.org/project/PyMySQL) and [bs4](https://pypi.org/project/beautifulsoup4) to access the images from the [pokemon.com](https://pokemon.com/pokedex) pokedex. This was made in python by **UnderGame#4540**. Feel free to contact me, and I hope you have fun!")
     embed.add_field(name="Commands Information",
                     value=f"Almost all commands accept the Pokemon **ID**, the **name** and '**random**' as arguments. That way, you can find your desired pokemon easily.",
@@ -72,51 +70,67 @@ async def info(ctx: interactions.CommandContext):
 
 
 # Repository command.
-@client.command(
+@interactions.slash_command(
     name = "repo",
     description = "Sends back the repository of this bot. It's open source!",
-    scope = 771651788134547456,
 )
-async def repo(ctx: interactions.CommandContext):
+async def repo(ctx: interactions.SlashContext):
     embed = makeEmbed(ctx, "Github Repo", "Check out the github repository [here](https://github.com/xUnderGame/PSoP)! If you wish to join the support discord, feel free to do so by clicking [here](https://discord.com/invite/Az7skvA2mf).")
     await ctx.send(embeds=embed)
 
 
 # Preferences command.
-@client.command(
+@interactions.slash_command(
     name="preferences",
-    description="Change your bot settings with this command.",
-    scope=771651788134547456,
-    options=[
-        interactions.Option(
-            name="favorite",
-            description="Change your favourite pokemon!",
-            type=interactions.OptionType.SUB_COMMAND,
-            options=[
-                interactions.Option(
-                    name="number",
-                    description="The pokemon number.",
-                    type=interactions.OptionType.INTEGER,
-                    required=False
-                )
-            ]
-        ),
-        interactions.Option(
-            name="previous",
-            description="Toggle on/off the ability to see previously seen pokemons.",
-            type=interactions.OptionType.SUB_COMMAND,
-            options=[
-                interactions.Option(
-                    name="toggle",
-                    description="Insert a bool (true/false) to toggle this setting.",
-                    type=interactions.OptionType.BOOLEAN,
-                    required=True
-                )
-            ]
+    description="Change your bot settings with this command."
+)
+async def preferences(ctx: interactions.SlashContext):
+    # Check if a database is up and working.
+    if not db:
+        await ctx.send("Sorry, we aren't able to load the database right now. Try again later!")
+        return
+
+@preferences.subcommand(sub_cmd_name="favorite",
+    sub_cmd_description="Change your favourite pokemon!",
+    options = [
+        interactions.SlashCommandOption(
+        name="number",
+        description="The pokemon number.",
+        type=interactions.OptionType.INTEGER,
+        required=False
         )
     ]
 )
-async def preferences(ctx: interactions.CommandContext, sub_command: str, toggle: bool = False, number: int = random.randrange(1, settings.maxNum+1)):
+async def favorite(ctx: interactions.InteractionContext, number: int = random.randrange(1, settings.maxNum + 1)):
+    # Check if a database is up and working.
+    if not db:
+        await ctx.send("Sorry, we aren't able to load the database right now. Try again later!")
+        return
+    
+    # Check if the change is valid.
+    number, editEmbed = await checkPokeNum(str(number), ctx, False)
+    if not number:
+        badEmbed = makeEmbed(ctx, "Preferences Error!", "Invalid pokemon number entered, check your arguments and try again.")
+        await ctx.send(embeds=badEmbed)
+        return
+
+    # Updates the user's fav pokemon.
+    dbUpdateFav(ctx, number)
+    favEmbed = makeEmbed(ctx, "Favorites Updated", f"Your new favorite pokemon has been set to {number}!")
+    await editEmbed.edit(embeds=favEmbed)
+
+@preferences.subcommand(sub_cmd_name="previous",
+    sub_cmd_description="Toggle on/off the ability to see previously seen Pokemons.",
+    options = [
+        interactions.SlashCommandOption(
+        name="toggle",
+        description="Insert a bool (true/false) to toggle this setting.",
+        type=interactions.OptionType.BOOLEAN,
+        required=True
+        )
+    ]
+)
+async def previous(ctx: interactions.InteractionContext, toggle: bool = False):
     notImplemented = "(Not implemented as of now)"
 
     # Check if a database is up and working.
@@ -124,40 +138,23 @@ async def preferences(ctx: interactions.CommandContext, sub_command: str, toggle
         await ctx.send("Sorry, we aren't able to load the database right now. Try again later!")
         return
     
-    # Set the user's new favorite pokemon.
-    if sub_command == "favorite":
-        # Check if the change is valid.
-        number, editEmbed = await checkPokeNum(str(number), ctx, False)
-        if not number:
-            badEmbed = makeEmbed(ctx, "Preferences Error!", "Invalid pokemon number entered, check your arguments and try again.")
-            await ctx.send(embeds=badEmbed)
-            return
+    # Change the setting.
+    if not toggle:
+        prevEmbed = makeEmbed(ctx, "Setting Updated", f"You will no longer see recent pokemons when using the random parameter. {notImplemented}")
+        dbUpdatePrev(ctx, False)
+    elif toggle:
+        prevEmbed = makeEmbed(ctx, "Setting Updated", f"You will now start to see recent pokemons when using the random parameter. {notImplemented}")
+        dbUpdatePrev(ctx, True)
 
-        # Updates the user's fav pokemon.
-        dbUpdateFav(ctx, number)
-        favEmbed = makeEmbed(ctx, "Favorites Updated", f"Your new favorite pokemon has been set to {number}!")
-        await editEmbed.edit(embeds=favEmbed)
-
-    # Toggles viewing recently seen pokemons.
-    elif sub_command == "previous":
-        # Change the setting.
-        if not toggle:
-            prevEmbed = makeEmbed(ctx, "Setting Updated", f"You will no longer see recent pokemons when using the random parameter. {notImplemented}")
-            dbUpdatePrev(ctx, False)
-        elif toggle:
-            prevEmbed = makeEmbed(ctx, "Setting Updated", f"You will now start to see recent pokemons when using the random parameter. {notImplemented}")
-            dbUpdatePrev(ctx, True)
-        
-        await ctx.send(embeds=prevEmbed)
+    await ctx.send(embeds=prevEmbed)
 
 
 # Fav user poke command & stats.
-@client.command(
+@interactions.slash_command(
     name = "stats",
     description = "Shows your stats with the bot. Command usage and more!",
-    scope = 771651788134547456
 )
-async def stats(ctx: interactions.CommandContext):
+async def stats(ctx: interactions.SlashContext):
     # Check if a database is up and working.
     if not db:
         await ctx.send("Sorry, we aren't able to load the database right now. Try again later!")
@@ -176,12 +173,11 @@ async def stats(ctx: interactions.CommandContext):
 
 
 # Leaderboard command. Shows the top x most smashed pokemon.
-@client.command(
+@interactions.slash_command(
     name = "leaderboard",
     description = "Replies back with a leaderboard containing the most smashed pokemons number.",
-    scope = 771651788134547456
 )
-async def leaderboard(ctx: interactions.CommandContext):
+async def leaderboard(ctx: interactions.SlashContext):
     # Get the information needed.
     hardCap = 9
     leaderboard = dbGetLeaderboard(hardCap)
@@ -195,12 +191,11 @@ async def leaderboard(ctx: interactions.CommandContext):
 
 
 # Pokemon of the day command.
-@client.command(
+@interactions.slash_command(
     name = "potd",
     description = "Sends the pokemon of the day!",
-    scope = 771651788134547456,
 )
-async def potd(ctx: interactions.CommandContext):
+async def potd(ctx: interactions.SlashContext):
     # Calculate the pokemon of the day and send it. (Day + Month + first two digits of the year + third digit + fourth)
     cDate = datetime.now()
     day = cDate.day
@@ -213,12 +208,11 @@ async def potd(ctx: interactions.CommandContext):
 
 
 # Smash command
-@client.command(
+@interactions.slash_command(
     name = "smash",
     description = "Smash a pokemon of your choosing.",
-    scope = 771651788134547456,
     options=[
-        interactions.Option(
+        interactions.SlashCommandOption(
             name="number",
             description="The pokemon number.",
             type=interactions.OptionType.STRING,
@@ -226,7 +220,7 @@ async def potd(ctx: interactions.CommandContext):
         )
     ]
 )
-async def smash(ctx: interactions.CommandContext, number: str = "random"):
+async def smash(ctx: interactions.SlashContext, number: str = "random"):
     # Check for the number
     number, deleteEmbed = await checkPokeNum(number, ctx, True)
     if number is False:
@@ -261,12 +255,11 @@ async def smash(ctx: interactions.CommandContext, number: str = "random"):
 
 
 # Pass command.
-@client.command(
+@interactions.slash_command(
     name = "pass",
     description = "Pass a pokemon of your choosing.",
-    scope = 771651788134547456,
     options=[
-        interactions.Option(
+        interactions.SlashCommandOption(
             name="number",
             description="The pokemon number.",
             type=interactions.OptionType.STRING,
@@ -274,7 +267,7 @@ async def smash(ctx: interactions.CommandContext, number: str = "random"):
         )
     ]
 )
-async def pokePass(ctx: interactions.CommandContext, number: str = "random"):
+async def pokePass(ctx: interactions.SlashContext, number: str = "random"):
     # Check for the number.
     number, deleteEmbed = await checkPokeNum(number, ctx, True)
     if number is False:
@@ -309,12 +302,11 @@ async def pokePass(ctx: interactions.CommandContext, number: str = "random"):
 
 
 # Check command.
-@client.command(
+@interactions.slash_command(
     name = "check",
     description = "placeholder",
-    scope = 771651788134547456,
     options=[
-        interactions.Option(
+        interactions.SlashCommandOption(
             name="number",
             description="The pokemon number.",
             type=interactions.OptionType.STRING,
