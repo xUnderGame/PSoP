@@ -8,7 +8,7 @@ Enjoy! (Please, credit me if you use the source code in any way).
 ## How to use for yourself?
 If you'd like to skip this entirely, you can invite the always 24/7 bot that can be found by [clicking here](https://top.gg/bot/942443498915909683). 
 
-Alternatively, you can follow the steps below to self-host the bot. (I don't recommend this at all)
+Alternatively, ~~you can follow the steps below to self-host the bot. (I don't recommend this at all)~~ (This is no longer supported.)
 ```
 Step 1: Download the repository files using the "CODE" tab and clicking on "Download ZIP" or selecting the link at the bottom of this page.
 
