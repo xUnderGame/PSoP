@@ -1,14 +1,16 @@
 # PSoP, the Discord Chatbot
-The public "*Pokemon Smash or Pass*" Github repository. It uses the BeautifulSoup (bs4), requests, discord.py, pymysql and python-dotenv. 
+**This project is now abandoned! This was pretty much made as a joke, the bot also can't be invited anymore, max discord guilds were reached :(**
+
+The public PSoP Github repository. It uses the BeautifulSoup (bs4), requests, discord.py, pymysql and python-dotenv libraries.
 
 If you are looking forward on using the bot and newer pokemons are released, you will need to edit the 'maxNum' variable located in 'settings.py', and add all the values into the MySQL database. Those being manually inserted or with a script.
 
 Enjoy! (Please, credit me if you use the source code in any way).
 
 ## How to use for yourself?
-If you'd like to skip this entirely, you can invite the always 24/7 bot that can be found by [clicking here](https://top.gg/bot/942443498915909683). 
+~~If you'd like to skip this entirely, you can invite the always 24/7 bot that can be found by clicking here~~. 
 
-Alternatively, ~~you can follow the steps below to self-host the bot. (I don't recommend this at all)~~ (This is no longer supported.)
+~~Alternatively, you can follow the steps below to self-host the bot. (I don't recommend this at all)~~ (This is no longer supported.)
 ```
 Step 1: Download the repository files using the "CODE" tab and clicking on "Download ZIP" or selecting the link at the bottom of this page.
 
@@ -29,7 +31,7 @@ Step 8: Run main.py and have fun!
 
 ## FAQ
 ### [Something] is not working!
-You can join the Discord support/development server by clicking [this link](https://discord.com/invite/Az7skvA2mf).
+It'll probably wont be fixed! (sorry, not sorry.)
 
 ### How can I create a SQL database?
 You can use Amazon AWS, Google Cloud, Firebase... They have some great tutorials on how to get started!
@@ -38,4 +40,4 @@ You can use Amazon AWS, Google Cloud, Firebase... They have some great tutorials
 There is a hard-cap on the pokemon ID, you can see it in the file "settings.py" and change it to your liking.
 
 ### Where do I download the bot?
-Click [here](https://github.com/xUnderGame/PSoP/releases/tag/v4.0.0) to download the lastest release of this bot.
+Click [here](https://github.com/xUnderGame/PSoP/releases/tag/v4.1.0) to download the lastest release of this bot.
